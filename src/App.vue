@@ -1,25 +1,34 @@
 <template>
   <div>
-    <video ref="videoRef" autoplay playsinline></video>
-    <div>
+    <h2>摄像头预览</h2>
+    <video ref="previewRef" autoplay playsinline muted></video>
+
+    <div style="margin-top: 10px;">
       <button @click="startRecording" :disabled="isRecording || !isSupported">开始录制</button>
       <button @click="stopRecording" :disabled="!isRecording">停止录制</button>
-      <button @click="uploadVideo" :disabled="!recordedBlob">上传视频</button>
-      <p v-if="!isSupported" style="color:red">当前设备/浏览器不支持视频录制</p>
     </div>
+
+    <div v-if="recordedBlob" style="margin-top: 20px;">
+      <h2>回放录制视频</h2>
+      <video ref="playbackRef" :src="recordedURL" controls></video>
+    </div>
+
+    <p v-if="!isSupported" style="color:red">当前浏览器不支持视频录制或摄像头权限</p>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
 
-const videoRef = ref(null);
+const previewRef = ref(null);
+const playbackRef = ref(null);
 const mediaRecorder = ref(null);
 const chunks = ref([]);
 const recordedBlob = ref(null);
+const recordedURL = ref(""); // blob URL
 const isRecording = ref(false);
 const streamRef = ref(null);
-const isSupported = ref(true); // 是否支持 MediaRecorder
+const isSupported = ref(true);
 
 // 检测浏览器是否支持 MediaRecorder
 onMounted(() => {
@@ -35,17 +44,22 @@ const startRecording = async () => {
   if (!isSupported.value) return;
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    streamRef.value = stream;
-    videoRef.value.srcObject = stream;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true
+      }
+    });
 
-    // 自动选择可用的 mimeType
+    streamRef.value = stream;
+    previewRef.value.srcObject = stream;
+    previewRef.value.muted = true; // ⚡ 静音预览，避免回音
+
     let options = { mimeType: "video/webm;codecs=vp8,opus" };
     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-      options = { mimeType: "video/mp4;codecs=h264,aac" }; // iOS Safari 兼容
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options = {}; // 浏览器自己选择默认
-      }
+      options = { mimeType: "video/mp4;codecs=h264,aac" };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) options = {};
     }
 
     mediaRecorder.value = new MediaRecorder(stream, options);
@@ -57,6 +71,8 @@ const startRecording = async () => {
     mediaRecorder.value.onstop = () => {
       recordedBlob.value = new Blob(chunks.value, { type: chunks.value[0]?.type || "video/webm" });
       chunks.value = [];
+      // 生成本地 blob URL 用于回放
+      recordedURL.value = URL.createObjectURL(recordedBlob.value);
     };
 
     mediaRecorder.value.start();
@@ -77,28 +93,10 @@ const stopRecording = () => {
   if (streamRef.value) {
     streamRef.value.getTracks().forEach(track => track.stop());
     streamRef.value = null;
-    videoRef.value.srcObject = null;
+    previewRef.value.srcObject = null;
     console.log("摄像头权限已释放");
   }
 
   isRecording.value = false;
-};
-
-// 上传视频
-const uploadVideo = async () => {
-  if (!recordedBlob.value) return;
-
-  const formData = new FormData();
-  formData.append("file", recordedBlob.value, "video.webm");
-
-  try {
-    const res = await fetch("https://qftms.metabasenet.site/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-    console.log("上传成功", await res.json());
-  } catch (err) {
-    console.error("上传失败", err);
-  }
 };
 </script>
