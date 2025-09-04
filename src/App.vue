@@ -1,7 +1,7 @@
 <template>
   <div>
     <h2>摄像头预览</h2>
-    <video ref="previewRef" autoplay playsinline muted></video>
+    <video style="width: 80vw;" ref="previewRef" autoplay playsinline muted></video>
 
     <div style="margin-top: 10px;">
       <button @click="startRecording" :disabled="isRecording || !isSupported">开始录制</button>
@@ -10,7 +10,7 @@
 
     <div v-if="recordedBlob" style="margin-top: 20px;">
       <h2>回放录制视频</h2>
-      <video ref="playbackRef" :src="recordedURL" controls></video>
+      <video style="width: 80vw;" ref="playbackRef" :src="recordedURL" controls></video>
     </div>
 
     <p v-if="!isSupported" style="color:red">当前浏览器不支持视频录制或摄像头权限</p>
