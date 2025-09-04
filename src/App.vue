@@ -120,7 +120,8 @@ const uploadVideo = async () => {
 
     const formData = new FormData();
     formData.append("file", recordedBlob.value, "recorded_video.webm");
-    let url = "https://qftms.metabasenet.site/api/api/upload";
+    //let url = "https://qftms.metabasenet.site/api/api/upload";
+    let url =  "https://image.mtree.live/api/upload";
     //url = "http://127.0.0.1:3000/api/upload";
     const response = await axios.post(
       url,
@@ -132,7 +133,7 @@ const uploadVideo = async () => {
         timeout: 30000 // 30秒超时，可按需修改
       }
     );
-    console.log("上传成功:", response.data.fileName);
+    console.log("上传成功:", `https://image.mtree.live/files/${response.data.fileName}`);
     alert("上传成功！");
   } catch (err) {
     console.error("上传失败:", err);
