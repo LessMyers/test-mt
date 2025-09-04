@@ -33,7 +33,6 @@ const streamRef = ref(null);
 const isSupported = ref(true);
 import axios from "axios";
 
-
 // 检测浏览器是否支持 MediaRecorder
 onMounted(() => {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
@@ -104,39 +103,6 @@ const stopRecording = () => {
   isRecording.value = false;
 };
 
-/*
-const uploadVideo = async () => {
-  if (!recordedBlob.value) {
-    alert("请先录制视频再上传！");
-    return;
-  }
-
-  try {
-    const formData = new FormData();
-    formData.append("file", recordedBlob.value, "recorded_video.webm");
-
-    //const response = await fetch("https://qftms.metabasenet.site/api/upload", {
-    //  method: "POST",
-    //  body: formData,
-    //});
-
-    const response = await fetch("http://127.0.0.1:3000/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) throw new Error("上传失败");
-
-    const result = await response.json();
-    console.log("上传成功:", result);
-    alert("上传成功！");
-  } catch (err) {
-    console.error("上传失败:", err);
-    alert(err);
-  }
-};
-*/
-
 const uploadVideo = async () => {
   if (!recordedBlob.value) {
     alert("请先录制视频再上传！");
@@ -166,8 +132,7 @@ const uploadVideo = async () => {
         timeout: 30000 // 30秒超时，可按需修改
       }
     );
-
-    console.log("上传成功:", response.data);
+    console.log("上传成功:", response.data.fileName);
     alert("上传成功！");
   } catch (err) {
     console.error("上传失败:", err);
