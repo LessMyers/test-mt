@@ -92,7 +92,7 @@ const uploadVideo = async () => {
   formData.append("file", recordedBlob.value, "video.webm");
 
   try {
-    const res = await fetch("http://192.168.0.127/api/upload", {
+    const res = await fetch("https://qftms.metabasenet.site/api/upload", {
       method: "POST",
       body: formData,
     });
