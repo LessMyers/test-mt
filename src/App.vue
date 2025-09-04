@@ -11,8 +11,10 @@
     <div v-if="recordedBlob" style="margin-top: 20px;">
       <h2>回放录制视频</h2>
       <video style="width: 80vw;" ref="playbackRef" :src="recordedURL" controls></video>
+      <br/>
+      <button @click="upload">上传视频</button>
+  
     </div>
-
     <p v-if="!isSupported" style="color:red">当前浏览器不支持视频录制或摄像头权限</p>
   </div>
 </template>
@@ -99,4 +101,9 @@ const stopRecording = () => {
 
   isRecording.value = false;
 };
+
+function upload() {
+  alert("上传视频");
+}
+
 </script>
