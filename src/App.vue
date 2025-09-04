@@ -11,9 +11,9 @@
     <div v-if="recordedBlob" style="margin-top: 20px;">
       <h2>回放录制视频</h2>
       <video style="width: 80vw;" ref="playbackRef" :src="recordedURL" controls></video>
-      <br/>
-      <button @click="upload">上传视频</button>
-  
+      <br />
+      <button @click="uploadVideo">上传视频</button>
+
     </div>
     <p v-if="!isSupported" style="color:red">当前浏览器不支持视频录制或摄像头权限</p>
   </div>
@@ -31,6 +31,8 @@ const recordedURL = ref(""); // blob URL
 const isRecording = ref(false);
 const streamRef = ref(null);
 const isSupported = ref(true);
+import axios from "axios";
+
 
 // 检测浏览器是否支持 MediaRecorder
 onMounted(() => {
@@ -102,8 +104,75 @@ const stopRecording = () => {
   isRecording.value = false;
 };
 
-function upload() {
-  alert("上传视频");
-}
+/*
+const uploadVideo = async () => {
+  if (!recordedBlob.value) {
+    alert("请先录制视频再上传！");
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("file", recordedBlob.value, "recorded_video.webm");
+
+    //const response = await fetch("https://qftms.metabasenet.site/api/upload", {
+    //  method: "POST",
+    //  body: formData,
+    //});
+
+    const response = await fetch("http://127.0.0.1:3000/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error("上传失败");
+
+    const result = await response.json();
+    console.log("上传成功:", result);
+    alert("上传成功！");
+  } catch (err) {
+    console.error("上传失败:", err);
+    alert(err);
+  }
+};
+*/
+
+const uploadVideo = async () => {
+  if (!recordedBlob.value) {
+    alert("请先录制视频再上传！");
+    return;
+  }
+
+  try {
+
+    const maxSizeMB = 10; // 最大允许 10 MB
+    const sizeMB = recordedBlob.value.size / 1024 / 1024;
+    if (sizeMB > maxSizeMB) {
+      alert(`视频太大！当前 ${sizeMB.toFixed(2)} MB，最大允许 ${maxSizeMB} MB`);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", recordedBlob.value, "recorded_video.webm");
+    let url = "https://qftms.metabasenet.site/api/api/upload";
+    //url = "http://127.0.0.1:3000/api/upload";
+    const response = await axios.post(
+      url,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        },
+        timeout: 30000 // 30秒超时，可按需修改
+      }
+    );
+
+    console.log("上传成功:", response.data);
+    alert("上传成功！");
+  } catch (err) {
+    console.error("上传失败:", err);
+    alert("上传失败，请检查控制台或后端接口");
+  }
+};
 
 </script>
