@@ -1,144 +1,52 @@
 <template>
   <div>
-    <h2>摄像头预览1</h2>
-    <video v-show="isRecording" style="width: 80vw;" ref="previewRef" autoplay playsinline muted></video>
-
-    <div style="margin-top: 10px;">
-      <button @click="startRecording" :disabled="isRecording || !isSupported">开始录制</button>
-      <button @click="stopRecording" :disabled="!isRecording">停止录制</button>
-    </div>
-
-    <div v-if="recordedBlob" style="margin-top: 20px;">
-      <h2>回放录制视频</h2>
-      <video style="width: 80vw;" ref="playbackRef" :src="recordedURL" controls></video>
-      <br />
-      <button @click="uploadVideo">上传视频</button>
-
-    </div>
-    <p v-if="!isSupported" style="color:red">当前浏览器不支持视频录制或摄像头权限</p>
+    <h2>BNB Chain 钱包连接 Demo</h2>
+    <button @click="connectWallet">连接钱包</button>
+    <p v-if="address">已连接钱包地址: {{ address }}</p>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref } from 'vue'
+import { ethers } from 'ethers'
+import EthereumProvider from '@walletconnect/ethereum-provider'
 
-const previewRef = ref(null);
-const playbackRef = ref(null);
-const mediaRecorder = ref(null);
-const chunks = ref([]);
-const recordedBlob = ref(null);
-const recordedURL = ref(""); // blob URL
-const isRecording = ref(false);
-const streamRef = ref(null);
-const isSupported = ref(true);
-import axios from "axios";
+const address = ref(null)
 
-// 检测浏览器是否支持 MediaRecorder
-onMounted(() => {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-    isSupported.value = false;
-    alert("当前浏览器不支持 MediaRecorder 或 getUserMedia");
-    console.warn("当前浏览器不支持 MediaRecorder 或 getUserMedia");
-  }
-});
+// ⚠️ 替换成你自己的 WalletConnect ProjectId
+const projectId = '4a5226b1c7e51b36cc2daf2a9715f3ff'
 
-// 开始录制
-const startRecording = async () => {
-  if (!isSupported.value) return;
-
+async function connectWallet() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true
+    // 检测 window.ethereum（桌面插件 / 手机钱包浏览器）
+    if (window.ethereum) {
+      let provider = window.ethereum
+      // 如果多个钱包共存，优先选第一个
+      if (window.ethereum.providers?.length > 0) {
+        provider = window.ethereum.providers[0]
       }
-    });
 
-    streamRef.value = stream;
-    previewRef.value.srcObject = stream;
-    previewRef.value.muted = true; // ⚡ 静音预览，避免回音
-
-    let options = { mimeType: "video/webm;codecs=vp8,opus" };
-    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-      options = { mimeType: "video/mp4;codecs=h264,aac" };
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) options = {};
+      // 请求授权
+      await provider.request({ method: 'eth_requestAccounts' })
+      const ethersProvider = new ethers.BrowserProvider(provider)
+      const signer = await ethersProvider.getSigner()
+      address.value = await signer.getAddress()
+      console.log('已连接:', address.value)
+    } else {
+      // 手机普通浏览器或无插件 → 使用 WalletConnect
+      const wcProvider = await EthereumProvider.init({
+        projectId,
+        chains: [56], // BNB Chain 主网
+        showQrModal: true // 弹出二维码 / deep link
+      })
+      await wcProvider.connect()
+      const ethersProvider = new ethers.BrowserProvider(wcProvider)
+      const signer = await ethersProvider.getSigner()
+      address.value = await signer.getAddress()
+      console.log('已连接:', address.value)
     }
-
-    mediaRecorder.value = new MediaRecorder(stream, options);
-
-    mediaRecorder.value.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.value.push(e.data);
-    };
-
-    mediaRecorder.value.onstop = () => {
-      recordedBlob.value = new Blob(chunks.value, { type: chunks.value[0]?.type || "video/webm" });
-      chunks.value = [];
-      // 生成本地 blob URL 用于回放
-      recordedURL.value = URL.createObjectURL(recordedBlob.value);
-    };
-
-    mediaRecorder.value.start();
-    isRecording.value = true;
-    console.log("开始录制");
   } catch (err) {
-    console.error("摄像头权限获取失败:", err);
+    console.error('连接失败:', err)
   }
-};
-
-// 停止录制 + 释放摄像头
-const stopRecording = () => {
-  if (mediaRecorder.value && mediaRecorder.value.state === "recording") {
-    mediaRecorder.value.stop();
-    console.log("停止录制");
-  }
-
-  if (streamRef.value) {
-    streamRef.value.getTracks().forEach(track => track.stop());
-    streamRef.value = null;
-    previewRef.value.srcObject = null;
-    console.log("摄像头权限已释放");
-  }
-
-  isRecording.value = false;
-};
-
-const uploadVideo = async () => {
-  if (!recordedBlob.value) {
-    alert("请先录制视频再上传！");
-    return;
-  }
-
-  try {
-
-    const maxSizeMB = 10; // 最大允许 10 MB
-    const sizeMB = recordedBlob.value.size / 1024 / 1024;
-    if (sizeMB > maxSizeMB) {
-      alert(`视频太大！当前 ${sizeMB.toFixed(2)} MB，最大允许 ${maxSizeMB} MB`);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", recordedBlob.value, "recorded_video.webm");
-    //let url = "https://qftms.metabasenet.site/api/api/upload";
-    let url =  "https://image.mtree.live/api/upload";
-    //url = "http://127.0.0.1:3000/api/upload";
-    const response = await axios.post(
-      url,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        },
-        timeout: 30000 // 30秒超时，可按需修改
-      }
-    );
-    console.log("上传成功:", `https://image.mtree.live/files/${response.data.fileName}`);
-    alert("上传成功！");
-  } catch (err) {
-    console.error("上传失败:", err);
-    alert("上传失败，请检查控制台或后端接口");
-  }
-};
-
+}
 </script>
