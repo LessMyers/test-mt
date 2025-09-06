@@ -3,6 +3,7 @@
     <h2>BNB Chain 钱包连接 Demo</h2>
     <button @click="connectWallet">连接钱包</button>
     <p v-if="address">已连接钱包地址: {{ address }}</p>
+    签名: {{ signature }}
   </div>
 </template>
 
@@ -12,6 +13,7 @@ import { ethers } from 'ethers'
 import EthereumProvider from '@walletconnect/ethereum-provider'
 
 const address = ref(null)
+const signature = ref("");
 
 // ⚠️ 替换成你自己的 WalletConnect ProjectId
 const projectId = '4a5226b1c7e51b36cc2daf2a9715f3ff'
@@ -44,6 +46,11 @@ async function connectWallet() {
       const signer = await ethersProvider.getSigner()
       address.value = await signer.getAddress()
       console.log('已连接:', address.value)
+
+         // 发起签名
+      const msg = "Hello, this is a test signature"
+      signature.value = await signer.signMessage(msg)
+      console.log('签名结果:', signature.value)
     }
   } catch (err) {
     console.error('连接失败:', err)
